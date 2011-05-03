@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Russ Smith"]
   s.date = %q{2011-05-02}
-  s.description = %q{TODO: longer description of your gem}
+  s.description = %q{A history of view events.}
   s.email = %q{russ@bashme.org}
   s.extra_rdoc_files = [
     "LICENSE.txt",
@@ -46,7 +46,7 @@ Gem::Specification.new do |s|
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
   s.rubygems_version = %q{1.5.0}
-  s.summary = %q{TODO: one-line summary of your gem}
+  s.summary = %q{A history of view events.}
   s.test_files = [
     "spec/db/migrate/20110502201938_create_viewables.rb",
     "spec/db/migrate/20110502223022_create_monocle_views.rb",
