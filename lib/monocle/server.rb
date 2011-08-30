@@ -11,5 +11,10 @@ module Monocle
         "o_0"
       end
     end
+
+    get "/:type/:id" do
+      content_type("image/gif")
+      File.open(File.join(File.dirname(__FILE__), "..", "transparent.gif"))
+    end
   end
 end
