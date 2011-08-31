@@ -1,6 +1,29 @@
 = monocle
 
-Description goes here.
+Gemfile
+
+  gem "monocle"
+
+Routes file
+
+  mount Monocle::Server.new, :at => "/monocle"
+
+Your server config
+
+  location /monocle/ {
+    if ($request_method = GET) {
+      rewrite ^(/monocle/.*) /images/transparent.gif last;
+    }
+
+    if ($request_method = POST) {
+      proxy_pass http://application;
+      rewrite ^(/monocle/.*) $1 break;
+    }
+  }
+
+Javascript in your views
+  
+  $.post("/monocle/my_object_type/my_object_id.gif");
 
 == Contributing to monocle
  
