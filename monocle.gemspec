@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{monocle}
-  s.version = "0.1.0"
+  s.version = "0.1.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Russ Smith"]
-  s.date = %q{2011-08-30}
+  s.date = %q{2011-08-31}
   s.description = %q{A history of view events.}
   s.email = %q{russ@bashme.org}
   s.extra_rdoc_files = [
@@ -35,13 +35,13 @@ Gem::Specification.new do |s|
     "lib/monocle/views.rb",
     "lib/monocle/weekly_view.rb",
     "lib/monocle/yearly_view.rb",
-    "lib/transparent.gif",
     "monocle.gemspec",
     "spec/db/migrate/20110502201938_create_viewables.rb",
     "spec/db/migrate/20110502223022_create_monocle_views.rb",
     "spec/spec_helper.rb",
     "spec/view_spec.rb",
-    "spec/viewable_spec.rb"
+    "spec/viewable_spec.rb",
+    "transparent.gif"
   ]
   s.homepage = %q{http://github.com/russ/monocle}
   s.licenses = ["MIT"]
