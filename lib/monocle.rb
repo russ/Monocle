@@ -40,9 +40,7 @@ module Monocle
 
   def view!
     @@view_types.keys.each do |view_type|
-      count = self.send("#{view_type}_views_count") + 1
-      @@redis.hset(self.monocle_key, self.send("#{view_type}_views_field"), count)
-
+      count = @@redis.hincrby(self.monocle_key, self.send("#{view_type}_views_field"), 1)
       cache_field = "#{view_type}_views".to_sym
       if respond_to?(cache_field)
         update_column(cache_field, count) if respond_to?(:update_column)
