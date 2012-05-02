@@ -1,14 +1,13 @@
-require "sinatra/base"
+require 'sinatra/base'
 
 module Monocle
   class Server < Sinatra::Base
-    post "/:type/:id(.:format)" do
-      begin
-        params[:type].classify.constantize.find(params[:id]).view!
-        ActiveRecord::Base.clear_active_connections!
-        "o_0 +1"
-      rescue ActiveRecord::RecordNotFound
-        "o_0"
+    post '/:type/:id(.:format)' do
+      if object = params[:type].classify.constantize.find(params[:id])
+        object.view!
+        'o_0 +1'
+      else
+        'o_0'
       end
     end
   end
