@@ -2,55 +2,61 @@ require 'active_support/concern'
 require 'active_support/core_ext'
 require 'redis'
 
-class Time
-  def beginning_of_hour
-    change(min: 0, sec: 0, usec: 0)
-  end
-end
+require 'monocle/core_ext'
 
 module Monocle
   extend ActiveSupport::Concern
 
   included do
-    @@redis = Redis.new || REDIS
+    class_attribute :_monocle_options,
+                    :_monocle_view_types,
+                    :_monocle_redis_connection
 
-    @@view_types = {
-      overall: -> { 'overall' },
-      yearly: -> { Time.now.beginning_of_year.to_i },
-      monthly: -> { Time.now.beginning_of_month.to_i },
-      weekly: -> { Time.now.beginning_of_week.to_i },
-      daily: -> { Time.now.beginning_of_day.to_i },
-      hourly: -> { Time.now.beginning_of_hour.to_i }
+    self._monocle_options = {
+      cache_view_counts: false
     }
 
-    class_eval do
-      def monocle_key
-        "monocle:#{self.class.to_s.downcase}:#{id}:"
-      end
+    self._monocle_view_types = {
+      overall: -> { 'overall' },
+      yearly:  -> { Time.now.beginning_of_year },
+      monthly: -> { Time.now.beginning_of_month },
+      weekly:  -> { Time.now.beginning_of_week },
+      daily:   -> { Time.now.beginning_of_day },
+      hourly:  -> { Time.now.beginning_of_hour }
+    }
+
+    self._monocle_redis_connection = Redis.new || REDIS
+  end
+
+  module ClassMethods
+    def monocle_options(options = {})
+      self._monocle_options = self._monocle_options.merge(options)
     end
 
-    @@view_types.each do |k,v|
-      define_method("#{k}_views_count") do
-        @@redis.hget(monocle_key, self.send("#{k}_views_field")).to_i || 0
-      end
+    def monocle_views(types = {})
+      self._monocle_view_types = types
+      self._monocle_view_types.each do |k,v|
+        define_method("#{k}_views_count") do
+          self._monocle_redis_connection.hget(_monocle_key, self.send("#{k}_views_field")).to_i || 0
+        end
 
-      define_method("#{k}_views_field") do
-        v.call
+        define_method("#{k}_views_field") do
+          field = v.call
+          field.is_a?(String) ? field : field.to_i
+        end
       end
-    end
-
-    if self.respond_to?(:after_destroy)
-      after_destroy(:destroy_views)
-    else
-      warn("#{self} doesn't support after_destroy callback, views will not be cleared automatically when object is destroyed")
     end
   end
 
+  def _monocle_key
+    "monocle:#{self.class.to_s.downcase}:#{id}:"
+  end
+
   def view!
-    @@view_types.keys.each do |view_type|
-      count = @@redis.hincrby(self.monocle_key, self.send("#{view_type}_views_field"), 1)
+    self._monocle_view_types.keys.each do |view_type|
       cache_field = "#{view_type}_views".to_sym
-      if respond_to?(cache_field)
+      count = self._monocle_redis_connection.hincrby(_monocle_key, self.send("#{view_type}_views_field"), 1)
+      if self._monocle_options[:cache_view_counts] && respond_to?(cache_field)
         update_column(cache_field, count) if respond_to?(:update_column)
         set(cache_field, count) if respond_to?(:set)
       end
@@ -58,7 +64,7 @@ module Monocle
   end
 
   def destroy_views
-    @@redis.del(self.monocle_key)
+    self._monocle_redis_connection.del(_monocle_key)
   end
 
   autoload :Server, 'monocle/server'
