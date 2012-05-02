@@ -1,4 +1,4 @@
-[![Build Status](https://secure.travis-ci.org/russ/Monocle.png?branch=master)](http://travis-ci.org/russ/Monocle)
+{<img src="https://secure.travis-ci.org/russ/Monocle.png?branch=master" alt="Build Status" />}[http://travis-ci.org/russ/Monocle]
 
 = monocle
 
