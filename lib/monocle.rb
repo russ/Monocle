@@ -1,18 +1,26 @@
 require 'active_support/concern'
+require 'active_support/core_ext'
 require 'redis'
+
+class Time
+  def beginning_of_hour
+    change(min: 0, sec: 0, usec: 0)
+  end
+end
 
 module Monocle
   extend ActiveSupport::Concern
 
   included do
     @@redis = Redis.new || REDIS
+
     @@view_types = {
       overall: -> { 'overall' },
-      yearly: -> { Time.now.strftime('%Y') },
-      monthly: -> { Time.now.strftime('%Y-%m') },
-      weekly: -> { Time.now.strftime('%Y-%m-%d-%U') },
-      daily: -> { Time.now.strftime('%Y-%m-%d-%U-%j') },
-      hourly: -> { Time.now.strftime('%Y-%m-%d-%U-%j-%H') }
+      yearly: -> { Time.now.beginning_of_year.to_i },
+      monthly: -> { Time.now.beginning_of_month.to_i },
+      weekly: -> { Time.now.beginning_of_week.to_i },
+      daily: -> { Time.now.beginning_of_day.to_i },
+      hourly: -> { Time.now.beginning_of_hour.to_i }
     }
 
     class_eval do

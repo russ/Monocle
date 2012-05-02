@@ -3,7 +3,8 @@ require 'spec_helper'
 class TestObject
   include Monocle
 
-  attr_accessor :overall_views, :yearly_views, :monthly_views, :weekly_views, :daily_views, :hourly_views
+  attr_accessor :overall_views, :yearly_views, :monthly_views
+  attr_accessor :weekly_views, :daily_views, :hourly_views
 
   def initialize
     @overall_views = 0
