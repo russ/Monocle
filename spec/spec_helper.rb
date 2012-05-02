@@ -14,7 +14,7 @@ REDIS = Redis.new
 
 RSpec.configure do |config|
   config.after(:each) do
-    REDIS.keys('testobject*').each do |key|
+    REDIS.keys('monocle*').each do |key|
       REDIS.del(key)
     end
   end
