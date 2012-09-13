@@ -13,7 +13,9 @@ module Monocle
                     :_monocle_redis_connection
 
     self._monocle_options = {
-      cache_view_counts: false
+      cache_view_counts: false,
+      cache_threshold: 15.minutes,
+      cache_threshold_check_field: :updated_at
     }
 
     self._monocle_view_types = {
@@ -63,16 +65,30 @@ module Monocle
 
   def view!
     self._monocle_view_types.keys.each do |view_type|
-      cache_field = "#{view_type}_views".to_sym
       count = self._monocle_redis_connection.hincrby(self.class.monocle_key(id), self.send("#{view_type}_views_field"), 1)
-      if self._monocle_options[:cache_view_counts] && respond_to?(cache_field)
-        update_column(cache_field, count) if respond_to?(:update_column)
-        set(cache_field, count) if respond_to?(:set)
-      end
+      cache_view_count(view_type, count) if should_cache_view_count?(view_type)
     end
 
     self._monocle_redis_connection.zadd(self.class.monocle_key('recently_viewed'), Time.now.to_i, id)
     self._monocle_redis_connection.zincrby(self.class.monocle_key('view_counts'), 1, id)
+  end
+
+  def cache_field_for_view(view_type)
+    "#{view_type}_views".to_sym
+  end
+
+  def should_cache_view_count?(view_type)
+    if self._monocle_options[:cache_view_counts] && respond_to?(cache_field_for_view(view_type))
+      if self.send(self._monocle_options[:cache_threshold_check_field]) < (Time.now - self._monocle_options[:cache_threshold])
+        return true
+      end
+    end
+    false
+  end
+
+  def cache_view_count(view_type, count)
+    update_column(cache_field_for_view(view_type), count) if respond_to?(:update_column)
+    set(cache_field_for_view(view_type), count) if respond_to?(:set)
   end
 
   def destroy_views

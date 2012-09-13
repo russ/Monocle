@@ -3,7 +3,9 @@ require 'spec_helper'
 class TestObject
   include Monocle
 
-  monocle_options cache_view_counts: true
+  monocle_options cache_view_counts: true,
+                  cache_threshold: 15.minutes,
+                  cache_threshold_check_field: :updated_at
 
   monocle_views overall:   -> { 'overall' },
                 yearly:    -> { Time.now.beginning_of_year },
@@ -31,6 +33,10 @@ class TestObject
 
   def update_column(field, count)
     self.send("#{field}=", count)
+  end
+
+  def updated_at
+    Time.now - 1.hour
   end
 end
 
