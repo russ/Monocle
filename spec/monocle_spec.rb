@@ -37,21 +37,38 @@ end
 describe Monocle do
   let(:object) { TestObject.new }
 
+  describe '#recently_viewed' do
+    before do
+      10.times do |i|
+        o = TestObject.new
+        o.id = i
+        o.view!
+      end
+    end
+
+    it 'returns the recently viewed objects in reverse order' do
+      recently_viewed = TestObject.recently_viewed(10)
+      recently_viewed.class.should == Array
+      recently_viewed.first.to_i.should == 9
+      recently_viewed.last.to_i.should == 0
+    end
+  end
+
   describe '#most_viewed_since' do
     before do
       10.times do |i|
         o = TestObject.new
         o.id = i
-        (i + 10).times do
-          o.view!
-        end
+        o.view!
       end
+
+      10.times { TestObject.find(3).view! }
     end
 
     it 'returns top viewed objects since a given time' do
       viewed = TestObject.most_viewed_since(Time.now.beginning_of_day)
       viewed.class.should == Array
-      viewed.first.id.should == TestObject.find(9).id
+      viewed.first.to_i.should == 3
     end
   end
 

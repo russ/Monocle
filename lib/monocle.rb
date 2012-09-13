@@ -52,9 +52,12 @@ module Monocle
       end
     end
 
+    def recently_viewed(since, limit = 1000)
+      self._monocle_redis_connection.zrevrangebyscore(self.monocle_key('recently_viewed'), Time.now.to_i, since.to_i, limit:[0,limit])
+    end
+
     def most_viewed_since(since, limit = 1000)
-      objects = self._monocle_redis_connection.zrevrangebyscore(self.monocle_key, Time.now.to_i, since.to_i, limit: [0, limit])
-      objects.collect { |o| self.find(o[0]) }
+      self._monocle_redis_connection.zrevrangebyscore(self.monocle_key('view_counts'), '+inf', '-inf', limit: [0, limit]) & recently_viewed(limit)
     end
   end
 
@@ -68,7 +71,8 @@ module Monocle
       end
     end
 
-    self._monocle_redis_connection.zadd(self.class.monocle_key, Time.now.to_i, id)
+    self._monocle_redis_connection.zadd(self.class.monocle_key('recently_viewed'), Time.now.to_i, id)
+    self._monocle_redis_connection.zincrby(self.class.monocle_key('view_counts'), 1, id)
   end
 
   def destroy_views
