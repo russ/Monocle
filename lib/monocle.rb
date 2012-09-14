@@ -54,36 +54,50 @@ module Monocle
       end
     end
 
-    def recently_viewed(since, limit = 1000)
-      self._monocle_redis_connection.zrevrangebyscore(self.monocle_key('recently_viewed'), Time.now.to_i, since.to_i, limit:[0,limit])
+    def recently_viewed_since(since, options = {})
+      options[:limit] ||= 1000
+      options[:with_objects] = options.has_key?(:with_objects) ? options[:with_objects] : true
+
+      results = self._monocle_redis_connection.zrevrangebyscore(self.monocle_key('recently_viewed'), Time.now.to_i, since.to_i, limit:[0, options[:limit]])
+      options[:with_objects] ? results.map { |id| self.find(id) } : results
     end
 
-    def most_viewed_since(since, limit = 1000)
-      self._monocle_redis_connection.zrevrangebyscore(self.monocle_key('view_counts'), '+inf', '-inf', limit: [0, limit]) & recently_viewed(limit)
+    def most_viewed_since(since, options = {})
+      options[:limit] ||= 1000
+      options[:with_objects] = options.has_key?(:with_objects) ? options[:with_objects] : true
+
+      viewed_by_score = self._monocle_redis_connection.zrevrangebyscore(self.monocle_key('view_counts'), '+inf', '-inf', limit: [0, options[:limit]])
+      results = viewed_by_score & recently_viewed_since(since, with_objects: false, limit: options[:limit])
+      options[:with_objects] ? results.map { |id| self.find(id) } : results
     end
   end
 
   def view!
-    self._monocle_view_types.keys.each do |view_type|
-      count = self._monocle_redis_connection.hincrby(self.class.monocle_key(id), self.send("#{view_type}_views_field"), 1)
-      cache_view_count(view_type, count) if should_cache_view_count?(view_type)
+    results = self._monocle_redis_connection.pipelined do
+      self._monocle_view_types.keys.each do |view_type|
+        self._monocle_redis_connection.hincrby(self.class.monocle_key(id), self.send("#{view_type}_views_field"), 1)
+      end
+      self._monocle_redis_connection.zadd(self.class.monocle_key('recently_viewed'), Time.now.to_i, id)
+      self._monocle_redis_connection.zincrby(self.class.monocle_key('view_counts'), 1, id)
     end
 
-    self._monocle_redis_connection.zadd(self.class.monocle_key('recently_viewed'), Time.now.to_i, id)
-    self._monocle_redis_connection.zincrby(self.class.monocle_key('view_counts'), 1, id)
+    if should_cache_view_count?
+      self._monocle_view_types.keys.each_with_index do |view_type, i|
+        cache_view_count(view_type, results[i])
+      end
+    end
   end
 
   def cache_field_for_view(view_type)
-    "#{view_type}_views".to_sym
+    :"#{view_type}_views"
   end
 
-  def should_cache_view_count?(view_type)
-    if self._monocle_options[:cache_view_counts] && respond_to?(cache_field_for_view(view_type))
-      if self.send(self._monocle_options[:cache_threshold_check_field]) < (Time.now - self._monocle_options[:cache_threshold])
-        return true
-      end
+  def should_cache_view_count?
+    if self._monocle_options[:cache_view_counts]
+      self.send(self._monocle_options[:cache_threshold_check_field]) < (Time.now - self._monocle_options[:cache_threshold])
+    else
+      false
     end
-    false
   end
 
   def cache_view_count(view_type, count)

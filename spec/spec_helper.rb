@@ -17,5 +17,6 @@ RSpec.configure do |config|
     REDIS.keys('monocle*').each do |key|
       REDIS.del(key)
     end
+    sleep(0.5)
   end
 end

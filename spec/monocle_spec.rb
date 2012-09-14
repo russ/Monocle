@@ -9,11 +9,11 @@ class TestObject
 
   monocle_views overall:   -> { 'overall' },
                 yearly:    -> { Time.now.beginning_of_year },
+                quarterly: -> { Time.now.beginning_of_quarter },
                 monthly:   -> { Time.now.beginning_of_month },
                 weekly:    -> { Time.now.beginning_of_week },
                 daily:     -> { Time.now.beginning_of_day },
-                hourly:    -> { Time.now.beginning_of_hour },
-                quarterly: -> { Time.now.beginning_of_quarter }
+                hourly:    -> { Time.now.beginning_of_hour }
 
   attr_accessor :id
   attr_accessor :overall_views, :yearly_views, :monthly_views
@@ -40,41 +40,41 @@ class TestObject
   end
 end
 
+def make_viewed_objects(number_of_objects_to_make)
+  number_of_objects_to_make.times do |i|
+    o = TestObject.new
+    o.id = i
+    o.view!
+  end
+end
+
 describe Monocle do
+
   let(:object) { TestObject.new }
 
   describe '#recently_viewed' do
-    before do
-      10.times do |i|
-        o = TestObject.new
-        o.id = i
-        o.view!
-      end
+    before { make_viewed_objects(10) }
+    let(:recently_viewed) { TestObject.recently_viewed_since(1.day.ago) }
+
+    it 'returns the most recently viewed object at the top of the list' do
+      recently_viewed.first.id.should == 9
     end
 
-    it 'returns the recently viewed objects in reverse order' do
-      recently_viewed = TestObject.recently_viewed(10)
-      recently_viewed.class.should == Array
-      recently_viewed.first.to_i.should == 9
-      recently_viewed.last.to_i.should == 0
+    it 'returns the last recently viewed object at the bottom of the list' do
+      recently_viewed.last.id.should == 0
     end
   end
 
   describe '#most_viewed_since' do
     before do
-      10.times do |i|
-        o = TestObject.new
-        o.id = i
-        o.view!
-      end
-
+      make_viewed_objects(10)
       10.times { TestObject.find(3).view! }
     end
 
     it 'returns top viewed objects since a given time' do
       viewed = TestObject.most_viewed_since(Time.now.beginning_of_day)
       viewed.class.should == Array
-      viewed.first.to_i.should == 3
+      viewed.first.id.should == 3
     end
   end
 
@@ -86,14 +86,39 @@ describe Monocle do
     end
   end
 
-  describe '#view!' do
-    before do
-      50.times { object.view! }
+  describe '#cache_field_for_view' do
+    it 'returns the cache field for the given view type' do
+      object.cache_field_for_view('overall').should == :overall_views
+    end
+  end
+
+  describe '#should_cache_view_count?' do
+    context 'the class has cache_view_counts set to true' do
+      context 'the objects last updated time is greater than the threshold' do
+        it 'returns true' do
+          object.should_cache_view_count?.should == true
+        end
+      end
+
+      context 'the objects last updated time is less than the threshold' do
+        it 'returns true' do
+          object.stub(:updated_at).and_return(Time.now)
+          object.should_cache_view_count?.should == false
+        end
+      end
     end
 
-    after do
-      object.destroy_views
+    context 'the class has cache_view_counts set to false' do
+      it 'returns false' do
+        object.class.stub(:_monocle_options).and_return({cache_view_counts:false})
+        object.should_cache_view_count?.should == false
+      end
     end
+  end
+
+  describe '#view!' do
+    before { 50.times { object.view! }}
+    after { object.destroy_views }
 
     %w(overall yearly monthly weekly daily hourly quarterly).each do |view_type|
       it "sets #{view_type} views count" do
