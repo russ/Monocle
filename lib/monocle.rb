@@ -85,6 +85,8 @@ module Monocle
       self._monocle_view_types.keys.each_with_index do |view_type, i|
         cache_view_count(view_type, results[i])
       end
+      self.update_column(self._monocle_options[:cache_threshold_check_field].to_sym, Time.now) if respond_to?(:update_column)
+      self.set(self._monocle_options[:cache_threshold_check_field].to_sym, Time.now) if respond_to?(:set)
     end
   end
 

@@ -16,6 +16,7 @@ class TestObject
                 hourly:    -> { Time.now.beginning_of_hour }
 
   attr_accessor :id
+  attr_accessor :updated_at
   attr_accessor :overall_views, :yearly_views, :monthly_views
   attr_accessor :weekly_views, :daily_views, :hourly_views
   attr_accessor :quarterly_views
@@ -29,14 +30,11 @@ class TestObject
   def initialize
     @id = '12345'
     @overall_views = 0
+    @updated_at = Time.now - 1.hour
   end
 
   def update_column(field, count)
     self.send("#{field}=", count)
-  end
-
-  def updated_at
-    Time.now - 1.hour
   end
 end
 
@@ -116,17 +114,38 @@ describe Monocle do
     end
   end
 
-  describe '#view!' do
-    before { 50.times { object.view! }}
-    after { object.destroy_views }
+  context 'when cache time is over threshold' do
+    describe '#view!' do
+      before { object.stub(:updated_at).and_return(Time.now - 1.hour) }
+      before { 50.times { object.view! }}
+      after { object.destroy_views }
 
-    %w(overall yearly monthly weekly daily hourly quarterly).each do |view_type|
-      it "sets #{view_type} views count" do
-        object.send("#{view_type}_views_count").should == 50
+      %w(overall yearly monthly weekly daily hourly quarterly).each do |view_type|
+        it "sets #{view_type} views count" do
+          object.send("#{view_type}_views_count").should == 50
+        end
+
+        it "updates cached #{view_type} views count" do
+          object.send("#{view_type}_views").should == 50
+        end
       end
+    end
+  end
 
-      it "updates cached #{view_type} views count" do
-        object.send("#{view_type}_views").should == 50
+  context 'when cache time is under threshold' do
+    describe '#view!' do
+      before { object.stub(:updated_at).and_return(Time.now) }
+      before { 50.times { object.view! }}
+      after { object.destroy_views }
+
+      %w(overall yearly monthly weekly daily hourly quarterly).each do |view_type|
+        it "sets #{view_type} views count" do
+          object.send("#{view_type}_views_count").should == 50
+        end
+
+        it "updates cached #{view_type} views count" do
+          object.send("#{view_type}_views").to_i.should == 0
+        end
       end
     end
   end
