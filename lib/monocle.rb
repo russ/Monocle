@@ -51,6 +51,15 @@ module Monocle
           field = v.call
           field.is_a?(String) ? field : field.to_i
         end
+
+        define_method("#{k}_clicks_count") do
+          self._monocle_redis_connection.hget(self.class.monocle_key(id), self.send("#{k}_clicks_field")).to_i || 0
+        end
+
+        define_method("#{k}_clicks_field") do
+          field = v.call
+          field.is_a?(String) ? field : field.to_i
+        end
       end
     end
 
@@ -90,8 +99,30 @@ module Monocle
     end
   end
 
+  def click!
+    results = self._monocle_redis_connection.pipelined do
+      self._monocle_view_types.keys.each do |view_type|
+        self._monocle_redis_connection.hincrby(self.class.monocle_key(id), self.send("#{view_type}_clicks_field"), 1)
+      end
+      self._monocle_redis_connection.zadd(self.class.monocle_key('recently_clicked'), Time.now.to_i, id)
+      self._monocle_redis_connection.zincrby(self.class.monocle_key('click_counts'), 1, id)
+    end
+
+    if should_cache_view_count?
+      self._monocle_view_types.keys.each_with_index do |view_type, i|
+        cache_click_count(view_type, results[i])
+      end
+      self.update_column(self._monocle_options[:cache_threshold_check_field].to_sym, Time.now) if respond_to?(:update_column)
+      self.set(self._monocle_options[:cache_threshold_check_field].to_sym, Time.now) if respond_to?(:set)
+    end
+  end
+
   def cache_field_for_view(view_type)
     :"#{view_type}_views"
+  end
+
+  def cache_field_for_click(view_type)
+    :"#{view_type}_clicks"
   end
 
   def should_cache_view_count?
@@ -105,6 +136,11 @@ module Monocle
   def cache_view_count(view_type, count)
     update_column(cache_field_for_view(view_type), count) if respond_to?(:update_column)
     set(cache_field_for_view(view_type), count) if respond_to?(:set)
+  end
+
+  def cache_click_count(view_type, count)
+    update_column(cache_field_for_click(view_type), count) if respond_to?(:update_column)
+    set(cache_field_for_click(view_type), count) if respond_to?(:set)
   end
 
   def destroy_views
