@@ -124,17 +124,31 @@ describe Monocle do
   context 'when cache time is over threshold' do
     describe '#view!' do
       before { object.stub(:updated_at).and_return(Time.now - 1.hour) }
-      before { 50.times { object.view!; object.click! }}
+      before { 50.times { object.view! } }
       after { object.destroy_views }
 
       %w(overall yearly monthly weekly daily hourly quarterly).each do |view_type|
         it "sets #{view_type} views count" do
           object.send("#{view_type}_views_count").should == 50
-          object.send("#{view_type}_clicks_count").should == 50
         end
 
         it "updates cached #{view_type} views count" do
           object.send("#{view_type}_views").should == 50
+        end
+      end
+    end
+
+    describe '#click!' do
+      before { object.stub(:updated_at).and_return(Time.now - 1.hour) }
+      before { 50.times { object.click! } }
+      after { object.destroy_views }
+
+      %w(overall yearly monthly weekly daily hourly quarterly).each do |view_type|
+        it "sets #{view_type} views count" do
+          object.send("#{view_type}_clicks_count").should == 50
+        end
+
+        it "updates cached #{view_type} views count" do
           object.send("#{view_type}_clicks").should == 50
         end
       end
