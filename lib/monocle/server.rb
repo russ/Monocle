@@ -8,8 +8,10 @@ module Monocle
       view_object(params[:type], params[:id])
     end
 
-    get '/:type/:id.:format' do
+    get '/:type/:id.gif' do
       view_object(params[:type], params[:id])
+      content_type('image/gif')
+      Base64.decode64('R0lGODlhAQABAPAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==')
     end
 
     get '/:type/click/:id.:format' do
