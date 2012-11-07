@@ -1,5 +1,6 @@
 require 'sinatra/base'
 require 'base64'
+require 'uri'
 
 module Monocle
   class Server < Sinatra::Base
@@ -31,7 +32,7 @@ module Monocle
     def click_object(type, id, redirect_to)
       if object = type.classify.constantize.find(id)
         object.click!
-        redirect(Base64.decode64(redirect_to), 301)
+        redirect(Base64.decode64(URI.unescape(redirect_to)), 301)
       end
     end
   end
