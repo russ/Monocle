@@ -14,11 +14,7 @@ module Monocle
       Base64.decode64('R0lGODlhAQABAPAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==')
     end
 
-    get '/:type/click/:id.:format' do
-      click_object(params[:type], params[:id], params[:redirect_to])
-    end
-
-    get '/:type/click/:redirect_to/:id.:format' do
+    get '/:type/click/:redirect_to/:id' do
       click_object(params[:type], params[:id], params[:redirect_to])
     end
 
