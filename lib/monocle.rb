@@ -27,7 +27,7 @@ module Monocle
       hourly:  -> { Time.now.beginning_of_hour }
     }
 
-    self._monocle_redis_connection = Redis.new || REDIS
+    self._monocle_redis_connection = $redis || REDIS || Redis.new
   end
 
   module ClassMethods
